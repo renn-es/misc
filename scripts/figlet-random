@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 # Display "Renn.es" in ASCII with a random figlet font.
 # This script can be used as a MOTD by adding its execution path to /etc/profile.
 
