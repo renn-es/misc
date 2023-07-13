@@ -1,0 +1,25 @@
+#! /bin/sh -e
+
+tmux a -t services || {
+	cd $HOME/services
+
+	tmux new-session -d
+
+	tmux rename-session services
+
+	tmux rename-window "~/services"
+
+	tmux split-window -v
+
+	tmux new-window -n "plancha" "ssh plancha"
+
+	tmux new-window -n 'monitor' 'ttyload -i 60'
+	tmux split-window -v 'htop'
+	tmux split-window -h 'slurm -d 60 -i eno1'
+	tmux select-pane -U
+	tmux split-window -h 'tail -f /var/log/syslog'
+
+	tmux select-window -t 0
+
+	tmux attach-session -d
+}
