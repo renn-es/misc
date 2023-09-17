@@ -11,13 +11,11 @@ tmux a -t services || {
 
 	tmux split-window -v
 
-	tmux new-window -n "plancha" "ssh plancha"
-
 	tmux new-window -n 'monitor' 'ttyload -i 60'
 	tmux split-window -v 'htop'
 	tmux split-window -h 'slurm -d 60 -i eno1'
 	tmux select-pane -U
-	tmux split-window -h 'tail -f /var/log/syslog'
+	tmux split-window -h 'doas journalctl -b -p warning -f'
 
 	tmux select-window -t 0
 
