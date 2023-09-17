@@ -1,0 +1,64 @@
+bin/sh -e
+# Copy local directories to a remote with Rsync and then run btrbk on the remote.
+# This script can both be run manually and as a cron job.
+
+# The remote host. Must be a user@host with ssh keys set up.
+HOST=
+# The remote path to the root where we will place backed up directories. NO trailing slash.
+LOCAL_ROOT=
+# The path of the private SSH key to use for the remote host.
+SSH_KEY=
+
+SSH_OPTIONS=
+
+LOCAL_BECOME_COMMAND="sudo"
+REMOTE_BECOME_COMMAND="doas"
+
+if [ -t 1 ]; then
+	# We are running in a terminal, so we can show progress in a nice way.
+	RSYNC_INFO_OPTION="--info=progress2"
+else
+	# We are running without an attached terminal, so we just log everything.
+	RSYNC_INFO_OPTION="-v"
+fi
+
+sync() {
+	# synchronize a local directory to a remote directory
+	# arguments:
+	#  $1: description of what we are synchronizing (e.g. "home directory" -> "Syncing home directory")
+	#  $2: remote directory to synchronize
+	#  $3: name of local directory to synchronize to. Relative to $REMOTE_ROOT.
+	#  $4 and onwards: directories to exclude from rsync
+	# example: sync "home directory" /home/risitas home .cache .local
+
+	MESSAGE="$1"
+	REMOTE_DIR=${2%/}/
+	LOCAL_DIR="$LOCAL_ROOT/$3"
+	LOCAL_DIR=${LOCAL_DIR%/}/ # Make sure we have a trailing slash (remove one if needed, then add one)
+
+	shift 3 # Remove the first three arguments, leaving only extra arguments to rsync
+
+	EXCLUDES=""
+
+	for i in "$@"; do
+		# Add --exclude arguments for each directory to exclude
+		EXCLUDES="$EXCLUDES --exclude=$i"
+	done
+
+	printf "\n\n" >&2
+	echo "================================" >&2
+	echo "Syncing $MESSAGE..." >&2
+	echo "Remote directory: $REMOTE_DIR" >&2
+	echo "Local directory: $LOCAL_DIR" >&2
+	echo "Excluded directories: $*" >&2
+	echo "================================" >&2
+	printf "\n" >&2
+
+	echo "Running rsync..." >&2
+
+	$LOCAL_BECOME_COMMAND rsync -aAXUH --delete --rsync-path="$REMOTE_BECOME_COMMAND rsync" -e "ssh -i $SSH_KEY $SSH_OPTIONS" "$RSYNC_INFO_OPTION" $EXCLUDES "$HOST:$REMOTE_DIR" "$LOCAL_DIR"
+}
+
+sync "data dir" /data data
+
+sudo btrbk run
